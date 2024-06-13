@@ -1,35 +1,30 @@
-name: Release Notes Draft generator
-
-on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        type: string
-        required: true
-        default: "8.2"
-      last_release:
-        type: string
-        required: true
-        default: "8.2.2"
-
-
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-
 jobs:
   main:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v3
+    - continue-on-error: true
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
-    - name: Set up Ruby
+    - continue-on-error: true
+      name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: '3.0'
-    - run: git config --global user.email "43502315+logstashmachine@users.noreply.github.com"
-    - run: git config --global user.name "logstashmachine"
-    - name: Create Release Notes Draft
-      run:  ./tools/release/generate_release_notes.rb ${{ github.event.inputs.branch }} ${{ github.event.inputs.last_release }} ${{ github.actor }} ${{ secrets.GITHUB_TOKEN }}
+    - continue-on-error: true
+      run: git config --global user.email "43502315+logstashmachine@users.noreply.github.com"
+    - continue-on-error: true
+      run: git config --global user.name "logstashmachine"
+    - continue-on-error: true
+      name: Create Release Notes Draft
+      run: ./tools/release/generate_release_notes.rb ${{ github.event.inputs.branch
+        }} ${{ github.event.inputs.last_release }} ${{ github.actor }} ${{ secrets.GITHUB_TOKEN
+        }}
+name: Release Notes Draft generator
+on:
+  repository_dispatch:
+    types: trigger-ga___gen_release_notes.yml
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write

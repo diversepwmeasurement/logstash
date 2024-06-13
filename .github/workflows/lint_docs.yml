@@ -1,69 +1,63 @@
-name: Lint the docs!
-on:
-  pull_request:
-    branches: [ "main" ]
-
-permissions:
-  pull-requests: write
-  contents: read
-
 jobs:
   lint-docs:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+    - continue-on-error: true
+      name: Checkout
+      uses: actions/checkout@v3
+    - continue-on-error: true
+      name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        cache: npm
+        node-version: 16.13.2
+    - continue-on-error: true
+      name: Install docs-lint
+      run: npm install -g @elastic/docs-lint
+    - continue-on-error: true
+      name: Install strip-ansi
+      run: npm install strip-ansi
+    - continue-on-error: true
+      id: run_docs_lint
+      name: Run docs-lint
+      run: 'LINT=$(((docs-lint $GITHUB_WORKSPACE/docs --asciidoc) 2>&1) || true)
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.13.2
-          cache: npm
+        echo "$LINT"
 
-      - name: Install docs-lint
-        run: npm install -g @elastic/docs-lint
+        LINT="${LINT//''%''/''%25''}"
 
-      - name: Install strip-ansi
-        run: npm install strip-ansi
-        
-      - name: Run docs-lint
-        id: run_docs_lint
-        run: |
-          LINT=$(((docs-lint $GITHUB_WORKSPACE/docs --asciidoc) 2>&1) || true)
-          echo "$LINT"
-          LINT="${LINT//'%'/'%25'}"
-          LINT="${LINT//$'\n'/'%0A'}"
-          LINT="${LINT//$'\r'/'%0D'}"
-          LINT="${LINT//$'`'/'\`'}"
-          echo "::set-output name=LINT_RESULT::$LINT"
+        LINT="${LINT//$''\n''/''%0A''}"
 
-      - name: Add PR comment
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const report = `${{ steps.run_docs_lint.outputs.LINT_RESULT }}`
-            if (report !== '') {
-              const { default: stripAnsi } = await import('/home/runner/work/docs-lint/docs-lint/node_modules/strip-ansi/index.js')
-              const cleanText = stripAnsi(report)
-              const errorWithContext = `**⚠️ Lint failed**\n~~~\n${cleanText}\n~~~`
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: errorWithContext
-              })
-            } else {
-              console.log("🎉 No errors!")
-            }
+        LINT="${LINT//$''\r''/''%0D''}"
 
-      - name: Throw error if linter fails
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const report = `${{ steps.run_docs_lint.outputs.LINT_RESULT }}`
-            if (report !== '') {
-              core.setFailed(report)
-            } else {
-              console.log("No errors!")
-            }
+        LINT="${LINT//$''`''/''\`''}"
+
+        echo "::set-output name=LINT_RESULT::$LINT"
+
+        '
+    - continue-on-error: true
+      name: Add PR comment
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: "const report = `${{ steps.run_docs_lint.outputs.LINT_RESULT }}`\n\
+          if (report !== '') {\n  const { default: stripAnsi } = await import('/home/runner/work/docs-lint/docs-lint/node_modules/strip-ansi/index.js')\n\
+          \  const cleanText = stripAnsi(report)\n  const errorWithContext = `**\u26A0\
+          \uFE0F Lint failed**\\n~~~\\n${cleanText}\\n~~~`\n  github.rest.issues.createComment({\n\
+          \    issue_number: context.issue.number,\n    owner: context.repo.owner,\n\
+          \    repo: context.repo.repo,\n    body: errorWithContext\n  })\n} else\
+          \ {\n  console.log(\"\U0001F389 No errors!\")\n}\n"
+    - continue-on-error: true
+      name: Throw error if linter fails
+      uses: actions/github-script@v6
+      with:
+        script: "const report = `${{ steps.run_docs_lint.outputs.LINT_RESULT }}`\n\
+          if (report !== '') {\n  core.setFailed(report)\n} else {\n  console.log(\"\
+          No errors!\")\n}\n"
+name: Lint the docs!
+on:
+  repository_dispatch:
+    types: trigger-ga___lint_docs.yml
+permissions:
+  contents: read
+  pull-requests: write
